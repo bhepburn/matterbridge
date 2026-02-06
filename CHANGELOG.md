@@ -7,6 +7,11 @@
 ![Node.js CI](https://github.com/Luligu/matterbridge/actions/workflows/build.yml/badge.svg)
 ![CodeQL](https://github.com/Luligu/matterbridge/actions/workflows/codeql.yml/badge.svg)
 [![codecov](https://codecov.io/gh/Luligu/matterbridge/branch/main/graph/badge.svg)](https://codecov.io/gh/Luligu/matterbridge)
+[![styled with prettier](https://img.shields.io/badge/styled_with-Prettier-f8bc45.svg?logo=prettier)](https://github.com/prettier/prettier)
+[![linted with eslint](https://img.shields.io/badge/linted_with-ES_Lint-4B32C3.svg?logo=eslint)](https://github.com/eslint/eslint)
+[![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![ESM](https://img.shields.io/badge/ESM-Node.js-339933?logo=node.js&logoColor=white)](https://nodejs.org/api/esm.html)
+[![matterbridge.io](https://img.shields.io/badge/matterbridge.io-online-brightgreen)](https://matterbridge.io)
 
 [![powered by](https://img.shields.io/badge/powered%20by-matter--history-blue)](https://www.npmjs.com/package/matter-history)
 [![powered by](https://img.shields.io/badge/powered%20by-node--ansi--logger-blue)](https://www.npmjs.com/package/node-ansi-logger)
@@ -16,7 +21,7 @@
 
 All notable changes to this project will be documented in this file.
 
-If you like this project and find it useful, please consider giving it a star on GitHub at https://github.com/Luligu/matterbridge and sponsoring it.
+If you like this project and find it useful, please consider giving it a star on [GitHub](https://github.com/Luligu/matterbridge) and sponsoring it.
 
 <a href="https://www.buymeacoffee.com/luligugithub"><img src="https://matterbridge.io/assets/bmc-button.svg" alt="Buy me a coffee" width="120"></a>
 
@@ -33,7 +38,7 @@ The project will evolve to a multi-threaded architecture (the CLI will become th
 
 - ✅ check updates;
 - npm install;
-- ✅ get the global node_modules directory;
+- ✅ check the global node_modules directory;
 
 Advantages:
 
@@ -41,6 +46,45 @@ Advantages:
 - isolation between threads;
 - individual plugin isolation in childbridge mode;
 - ability to update the plugin in childbridge mode without restarting matterbridge;
+
+## [3.5.3] - 2026-02-06
+
+### Dev Breaking Changes
+
+- [logger]: The logger (node-ansi-logger) has been refactored and updated (v.3.2.0) to support the new features below.
+
+### Breaking Changes
+
+- [docker]: Updated latest and dev docker images to use node:24-trixie-slim as base.
+- [node]: Consider to update all setups to node 24 that is now the LTS.
+
+### Added
+
+- [docker]: Added workflow, scripts and dockerfile to build the **s6-rc-base** base image used by the Matterbridge Home Assistant Application.
+- [docker]: Added workflow, scripts and dockerfile to build the **24-ubuntu-slim** base image used by the ubuntu Matterbridge docker image.
+- [frontend]: Added title rendering to the config editor and allow ui properties in 'oneOf', 'anyOf', 'allOf'. Thanks RinDevJunior (https://github.com/Luligu/matterbridge/pull/495).
+- [frontend]: Added SearchPluginsDialog in Install plugins panel on the home page.
+- [frontend]: Added version/tag selector to HomeInstallAddPlugins. Thanks RinDevJunior for the great idea (https://github.com/Luligu/matterbridge/pull/500).
+- [publish]: Migrated to trusted publishing / OIDC.
+- [logger]: Added parameter **--no-ansi** to disable ANSI color escape codes in all loggers. Accepts also environment variable **NO_COLOR=1** (https://no-color.org/).
+- [package]: Added version.mjs, sync-workspaces.mjs, bundle-workspaces.mjs, publish-workspaces.mjs and pack-workspaces.mjs scripts for managing monorepo packages versions and dependencies.
+
+### Changed
+
+- [package]: Updated dependencies.
+- [workflows]: Updated all workflows to use Node.js 24.
+- [readme]: Updated readme files to clarify which Node.js version should be installed.
+- [docker]: Updated docker readme file to clarify which base image is used.
+- [matter.js]: Bump to matter.j v. 0.16.8.
+- [frontend]: Bumped `frontend` version to v. 3.4.4.
+- [frontend]: Updated `frontend` dependencies.
+- [frontend]: Updated rendering of button actions in config editor.
+
+### Fixed
+
+- [publish]: Updated publish.yml to trigger the correct docker-buildx-latest.yml.
+
+<a href="https://www.buymeacoffee.com/luligugithub"><img src="https://matterbridge.io/assets/bmc-button.svg" alt="Buy me a coffee" width="80"></a>
 
 ## [3.5.2] - 2026-01-31
 

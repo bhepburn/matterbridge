@@ -11,6 +11,9 @@ on:
       - 'systemd/**' # any file under systemd/
       - 'frontend/build/**' # any file under frontend/build/
       - '**/*.md' # any .md anywhere
+      - '**/*.spec.ts' # any .spec.ts anywhere
+      - '**/*.test.ts' # any .test.ts anywhere
+      - '**/__test__/*.ts' # any .ts under __test__
   pull_request:
     branches: [main]
     paths-ignore:
@@ -21,7 +24,15 @@ on:
       - 'systemd/**' # any file under systemd/
       - 'frontend/build/**' # any file under frontend/build/
       - '**/*.md' # any .md anywhere
+      - '**/*.spec.ts' # any .spec.ts anywhere
+      - '**/*.test.ts' # any .test.ts anywhere
+      - '**/__test__/*.ts' # any .ts under __test__
   workflow_dispatch:
+
+# Cancel previous runs when a new one is triggered (same branch/PR)
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   analyze:
@@ -37,4 +48,16 @@ jobs:
       - uses: github/codeql-action/init@v4
         with:
           languages: javascript
+          config: |
+            paths-ignore:
+              - 'docs/**'
+              - 'screenshots/**'
+              - 'scripts/**'
+              - 'chip/**'
+              - 'systemd/**'
+              - 'frontend/build/**'
+              - '**/*.md'
+              - '**/*.spec.ts'
+              - '**/*.test.ts'
+              - '**/__test__/*.ts'
       - uses: github/codeql-action/analyze@v4

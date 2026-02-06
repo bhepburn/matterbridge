@@ -21,6 +21,5 @@
     "alwaysStrict": true,
     "noImplicitOverride": true,
     "skipLibCheck": true
-  },
-  "references": [{ "path": "./packages/jest-utils" }, { "path": "./packages/vitest-utils" }, { "path": "./" }, { "path": "./packages/utils" }, { "path": "./packages/dgram" }]
+  }
 }

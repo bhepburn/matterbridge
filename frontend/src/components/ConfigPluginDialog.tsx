@@ -75,6 +75,7 @@ const rjsfDebug = false;
 
 const titleSx = { fontSize: '16px', fontWeight: 'bold', color: 'var(--div-text-color)', backgroundColor: 'var(--div-bg-color)' };
 const descriptionSx = { fontSize: '12px', fontWeight: 'normal', color: 'var(--div-text-color)', backgroundColor: 'var(--div-bg-color)' };
+const descriptionButtonSx = { fontSize: '16px', fontWeight: 'bold', color: 'var(--div-text-color)', backgroundColor: 'var(--div-bg-color)' };
 const helpSx = { fontSize: '14px', fontWeight: 'normal', color: 'var(--secondary-color)', backgroundColor: 'var(--div-bg-color)' };
 const errorTitleSx = { fontSize: '16px', fontWeight: 'bold', backgroundColor: 'var(--div-bg-color)' };
 const iconButtonSx = { padding: '0px', margin: '0px' };
@@ -85,6 +86,21 @@ const listItemTextPrimaryStyle = {};
 const listItemTextSecondaryStyle = {};
 let selectDevices: ApiSelectDevice[] = [];
 let selectEntities: ApiSelectEntity[] = [];
+
+type RjsfPropertyWithStringType = RJSFSchema & { type: string };
+
+function hasSchemaPropertyWithStringType(schema: RJSFSchema, name: string): schema is RJSFSchema & { properties: Record<string, RjsfPropertyWithStringType> } {
+  const properties: unknown = schema?.properties;
+  if (!properties || typeof properties !== 'object') return false;
+  const property: unknown = (properties as Record<string, unknown>)[name];
+  if (!property || typeof property !== 'object') return false;
+  return typeof (property as { type?: unknown }).type === 'string';
+}
+
+function hasSchemaItemsWithDefault(schema: RJSFSchema): schema is RJSFSchema & { items: RJSFSchema & { default: unknown } } {
+  const items = schema.items;
+  return items !== undefined && typeof items === 'object' && !Array.isArray(items);
+}
 
 export interface ConfigPluginDialogProps {
   open: boolean;
@@ -98,10 +114,12 @@ export const ConfigPluginDialog = ({ open, onClose, plugin }: ConfigPluginDialog
 
   // Refs
   const uniqueId = useRef(getUniqueId());
+  const schemaRef = useRef({} as RJSFSchema);
+  const uiSchemaRef = useRef({} as UiSchema);
 
   // States
   const [formData, setFormData] = useState(plugin.configJson);
-  const [schema, setSchema] = useState<any>(null as any);
+  const [schema, setSchema] = useState(plugin.schemaJson);
   const [uiSchema, setUiSchema] = useState<UiSchema>({
     'ui:submitButtonOptions': {
       'submitText': 'Confirm',
@@ -138,6 +156,8 @@ export const ConfigPluginDialog = ({ open, onClose, plugin }: ConfigPluginDialog
     // Move the ui: properties from the schema to the uiSchema
     if (formData && schema && schema.properties) {
       if (rjsfDebug) console.log('ConfigPluginDialog moveToUiSchema:', schema, uiSchema);
+
+      /*
       Object.keys(schema.properties).forEach((key) => {
         Object.keys(schema.properties[key]).forEach((subkey) => {
           if (subkey.startsWith('ui:')) {
@@ -149,7 +169,58 @@ export const ConfigPluginDialog = ({ open, onClose, plugin }: ConfigPluginDialog
           }
         });
       });
+      */
+      const moveUiPropertiesToUiSchema = (schemaObj: RJSFSchema, uiSchemaObj: UiSchema, path: string[] = []) => {
+        if (!schemaObj || typeof schemaObj !== 'object') return;
+
+        // Handle properties object
+        if (schemaObj.properties) {
+          Object.keys(schemaObj.properties).forEach((key) => {
+            const property = schemaObj.properties?.[key] as RJSFSchema;
+            const currentPath = [...path, key];
+
+            // Move ui:* properties from this property
+            Object.keys(property).forEach((subkey) => {
+              if (subkey.startsWith('ui:')) {
+                if (rjsfDebug) console.log('ConfigPluginDialog moveToUiSchema:', currentPath.join('.'), subkey, property[subkey]);
+
+                // Create nested uiSchema structure
+                let currentUiSchema = uiSchemaObj;
+                currentPath.forEach((p) => {
+                  if (!currentUiSchema[p]) currentUiSchema[p] = {};
+                  currentUiSchema = currentUiSchema[p];
+                });
+                currentUiSchema[subkey] = property[subkey];
+
+                // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
+                delete property[subkey];
+              }
+            });
+
+            // Recursively process nested properties
+            moveUiPropertiesToUiSchema(property, uiSchemaObj, currentPath);
+          });
+        }
+
+        // Handle oneOf/anyOf/allOf arrays
+        ['oneOf', 'anyOf', 'allOf'].forEach((keyword) => {
+          if (Array.isArray(schemaObj[keyword])) {
+            schemaObj[keyword].forEach((subSchema) => {
+              moveUiPropertiesToUiSchema(subSchema, uiSchemaObj, path);
+            });
+          }
+        });
+
+        // Handle items (for arrays)
+        if (schemaObj.items && typeof schemaObj.items === 'object') {
+          moveUiPropertiesToUiSchema(schemaObj.items, uiSchemaObj, path);
+        }
+      };
+
+      moveUiPropertiesToUiSchema(schema, uiSchema);
       setUiSchema(uiSchema);
+      schemaRef.current = schema; // We make sure state is updated
+      uiSchemaRef.current = uiSchema; // We make sure state is updated
       if (rjsfDebug) console.log('ConfigPluginDialog moveToUiSchema:', schema, uiSchema);
     }
 
@@ -391,8 +462,8 @@ export const ConfigPluginDialog = ({ open, onClose, plugin }: ConfigPluginDialog
       // console.log('ArrayFieldTemplate: handleSelectValue', value);
       setDialogDeviceOpen(false);
       // Trigger onAddClick to add the selected new item
-      if (schema.selectFrom === 'serial') (schema as any).items.default = value.serial;
-      else if (schema.selectFrom === 'name') (schema as any).items.default = value.name;
+      if (schema.selectFrom === 'serial' && hasSchemaItemsWithDefault(schema)) schema.items.default = value.serial;
+      else if (schema.selectFrom === 'name' && hasSchemaItemsWithDefault(schema)) schema.items.default = value.name;
       onAddClick();
     };
 
@@ -400,8 +471,8 @@ export const ConfigPluginDialog = ({ open, onClose, plugin }: ConfigPluginDialog
       // console.log('ArrayFieldTemplate: handleSelectEntityValue', value);
       setDialogEntityOpen(false);
       // Trigger onAddClick to add the selected new item
-      if (schema.selectEntityFrom === 'name') (schema as any).items.default = value.name;
-      else if (schema.selectEntityFrom === 'description') (schema as any).items.default = value.description;
+      if (schema.selectEntityFrom === 'name' && hasSchemaItemsWithDefault(schema)) schema.items.default = value.name;
+      else if (schema.selectEntityFrom === 'description' && hasSchemaItemsWithDefault(schema)) schema.items.default = value.description;
       onAddClick();
     };
 
@@ -409,8 +480,8 @@ export const ConfigPluginDialog = ({ open, onClose, plugin }: ConfigPluginDialog
       // console.log('ArrayFieldTemplate: handleSelectEntityValue', value);
       setDialogDeviceEntityOpen(false);
       // Trigger onAddClick to add the selected new item
-      if (schema.selectDeviceEntityFrom === 'name') (schema as any).items.default = value.name;
-      else if (schema.selectDeviceEntityFrom === 'description') (schema as any).items.default = value.description;
+      if (schema.selectDeviceEntityFrom === 'name' && hasSchemaItemsWithDefault(schema)) schema.items.default = value.name;
+      else if (schema.selectDeviceEntityFrom === 'description' && hasSchemaItemsWithDefault(schema)) schema.items.default = value.description;
       onAddClick();
     };
 
@@ -737,11 +808,11 @@ export const ConfigPluginDialog = ({ open, onClose, plugin }: ConfigPluginDialog
                 sx={{
                   margin: '0px',
                   marginBottom: '10px',
-                  padding: ['object', 'array', 'boolean'].includes((schema as any).properties[name].type) ? '0px' : boxPadding,
-                  border: ['object', 'array', 'boolean'].includes((schema as any).properties[name].type) ? 'none' : rjsfDebug ? '2px solid blue' : '1px solid grey',
+                  padding: hasSchemaPropertyWithStringType(schema, name) && ['object', 'array'].includes(schema.properties[name].type) ? '0px' : boxPadding,
+                  border: hasSchemaPropertyWithStringType(schema, name) && ['object', 'array'].includes(schema.properties[name].type) ? 'none' : rjsfDebug ? '2px solid blue' : '1px solid grey',
                 }}
               >
-                {!['object', 'array', 'boolean'].includes((schema as any).properties[name].type) && <Typography sx={titleSx}>{name}</Typography>}
+                {hasSchemaPropertyWithStringType(schema, name) && !['object', 'array', 'boolean'].includes(schema.properties[name].type) && <Typography sx={titleSx}>{schema.properties[name].title || name}</Typography>}
                 <Box sx={{ flexGrow: 1, padding: '0px', margin: '0px' }}>{content}</Box>
               </Box>
             ),
@@ -886,19 +957,21 @@ export const ConfigPluginDialog = ({ open, onClose, plugin }: ConfigPluginDialog
       else if (schema.buttonSave === true) handleSaveChanges({ formData } as any); // Save changes and we don't close (no need for other props).
     };
 
-    if (schema.buttonText && schema.description) {
+    if (schema.buttonText && (schema.title || schema.description)) {
+      /* SPECIAL: button with description */
       return (
-        <Box sx={{ margin: '0px', padding: '10px', border: '1px solid grey', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Typography sx={descriptionSx}>{schema.description}</Typography>
+        <Box sx={{ margin: '0px', padding: '5px 0px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Typography sx={descriptionButtonSx}>{schema.title || schema.description}</Typography>
           <Button variant='contained' color='primary' onClick={() => onClick()}>
             {schema.buttonText}
           </Button>
         </Box>
       );
-    } else if (schema.buttonField && schema.description) {
+    } else if (schema.buttonField && (schema.title || schema.description)) {
+      /* SPECIAL: text field with button and description */
       return (
-        <Box sx={{ margin: '0px', padding: '10px', gap: '20px', border: '1px solid grey', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Typography sx={descriptionSx}>{schema.description}</Typography>
+        <Box sx={{ margin: '0px', padding: '5px 0px', gap: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Typography sx={descriptionButtonSx}>{schema.title || schema.description}</Typography>
           <TextField id={name + '-input'} name={name} label={schema.textLabel} placeholder={schema.textPlaceholder} onChange={(event) => onChangeField(event.target.value)} sx={{ width: '250px', minWidth: '250px', maxWidth: '250px' }} />
           <Button id={name + '-button'} variant='contained' color='primary' disabled={fieldValue === undefined} onClick={() => onClick()}>
             {schema.buttonField}
@@ -907,10 +980,10 @@ export const ConfigPluginDialog = ({ open, onClose, plugin }: ConfigPluginDialog
       );
     }
     return (
-      <Box sx={{ margin: '0px', padding: '5px 10px', border: '1px solid grey' }}>
+      <Box sx={{ margin: '0px', padding: '0px' }}>
         {name && (
           <Box sx={{ margin: '0px', padding: '0px', gap: '10px', display: 'flex', justifyContent: 'flex-start', alignItems: 'center' }}>
-            <Typography sx={titleSx}>{name}</Typography>
+            <Typography sx={titleSx}>{schema.title || name}</Typography>
             <Checkbox checked={value} readOnly={readonly} onChange={() => onChange(!value)} sx={{ padding: '0px', margin: '0px' }} />
           </Box>
         )}

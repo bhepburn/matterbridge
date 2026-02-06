@@ -6,33 +6,37 @@ import TextField from '@mui/material/TextField';
 import Tooltip from '@mui/material/Tooltip';
 import IconButton from '@mui/material/IconButton';
 import Button from '@mui/material/Button';
+import FormControl from '@mui/material/FormControl';
+import InputLabel from '@mui/material/InputLabel';
+import Select from '@mui/material/Select';
 import MenuItem from '@mui/material/MenuItem';
-import Menu from '@mui/material/Menu';
 
 // @mui/icons-material
 import Download from '@mui/icons-material/Download';
 import FileUploadIcon from '@mui/icons-material/FileUpload';
 import Add from '@mui/icons-material/Add';
-import MoreVert from '@mui/icons-material/MoreVert';
 import DeleteForeverOutlinedIcon from '@mui/icons-material/DeleteForeverOutlined';
+import ManageSearchIcon from '@mui/icons-material/ManageSearch';
 
 // Frontend
 import { UiContext } from './UiProvider';
 import { WebSocketContext } from './WebSocketProvider';
 import { MbfWindow, MbfWindowContent, MbfWindowHeader, MbfWindowHeaderText, MbfWindowIcons } from './MbfWindow';
+import { SearchPluginsDialog } from './SearchPluginsDialog';
 import { debug, enableMobile } from '../App';
 
 export const pluginIgnoreList = [
-  'matterbridge-',
-  'matterbridge-plugin-template',
-  'matterbridge-dyson',
-  'matterbridge-irobot',
-  'matterbridge-tuya',
-  'matterbridge-mqtt',
-  'matterbridge-matter',
-  'matterbridge-security',
-  'matterbridge-automations',
-  'matterbridge-securitysystem',
+  'matterbridge-', // invalid name
+  'matterbridge-plugin-template', // standard template repository - someone published on hist name!!!!!!!
+  'matterbridge-dyson', // my package
+  'matterbridge-irobot', // my package
+  'matterbridge-tuya', // my package
+  'matterbridge-mqtt', // my package
+  'matterbridge-matter', // my package
+  'matterbridge-security', // my package
+  'matterbridge-automations', // my package
+  'matterbridge-securitysystem', // empty place holder
+  'matterbridge-adapter', // 5 years ago
 ];
 
 function HomeInstallAddPlugins() {
@@ -42,10 +46,51 @@ function HomeInstallAddPlugins() {
 
   // States
   const [pluginName, setPluginName] = useState('matterbridge-');
+  const [pluginVersions, setPluginVersions] = useState<string[]>(['latest', 'dev']);
+  const [selectedPluginVersion, setSelectedPluginVersion] = useState<string>('latest');
   const [_dragging, setDragging] = useState(false);
-  const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
   // Refs
   const uniqueId = useRef(getUniqueId());
+
+  const splitPackageNameAndSpecifier = (input: string): { name: string; specifier: string | null } => {
+    const s = String(input ?? '').trim();
+    if (!s) return { name: '', specifier: null };
+
+    // Scoped package: @scope/name@specifier
+    if (s.startsWith('@')) {
+      const at = s.lastIndexOf('@');
+      if (at > 0) {
+        const before = s.slice(0, at);
+        const after = s.slice(at + 1);
+        if (before.includes('/') && after) return { name: before, specifier: after };
+      }
+      return { name: s, specifier: null };
+    }
+
+    // Unscoped: name@specifier
+    const at = s.indexOf('@');
+    if (at > 0) {
+      const before = s.slice(0, at);
+      const after = s.slice(at + 1);
+      if (after) return { name: before, specifier: after };
+      return { name: before, specifier: null };
+    }
+
+    return { name: s, specifier: null };
+  };
+
+  const buildInstallPackageName = (): string => {
+    const { name, specifier } = splitPackageNameAndSpecifier(pluginName);
+    if (!name) return '';
+
+    // If the user typed a specifier directly, respect it.
+    if (specifier) return `${name}@${specifier}`;
+
+    // Otherwise, apply dropdown selection (latest/dev/version) if available.
+    if (selectedPluginVersion) return `${name}@${selectedPluginVersion}`;
+
+    return name;
+  };
 
   // Handle drag events
   const handleDragOver = (event: React.DragEvent<HTMLDivElement>) => {
@@ -110,11 +155,13 @@ function HomeInstallAddPlugins() {
   };
 
   const handleInstallPluginClick = () => {
-    if (pluginIgnoreList.includes(pluginName.split('@')[0])) {
-      showSnackbarMessage(`Installation of plugin "${pluginName}" is blocked by the ignore list.`);
+    const installName = buildInstallPackageName();
+    if (!installName) return;
+    if (pluginIgnoreList.includes(installName.split('@')[0])) {
+      showSnackbarMessage(`Installation of plugin "${installName}" is blocked by the ignore list.`);
       return;
     }
-    sendMessage({ id: uniqueId.current, sender: 'InstallPlugins', method: '/api/install', src: 'Frontend', dst: 'Matterbridge', params: { packageName: pluginName, restart: false } });
+    sendMessage({ id: uniqueId.current, sender: 'InstallPlugins', method: '/api/install', src: 'Frontend', dst: 'Matterbridge', params: { packageName: installName, restart: false } });
   };
 
   const handleUninstallPluginClick = () => {
@@ -136,21 +183,35 @@ function HomeInstallAddPlugins() {
   // Right-click handlers
   const handleUploadRightClick = (event: React.MouseEvent<HTMLButtonElement>) => {
     event.preventDefault();
-    console.log('Right-clicked Upload button');
+    if (debug) console.log('Right-clicked Upload button');
   };
 
   const handleAddRightClick = (event: React.MouseEvent<HTMLButtonElement>) => {
     event.preventDefault();
-    console.log('Right-clicked Add button');
+    if (debug) console.log('Right-clicked Add button');
   };
 
-  const handleClickVertical = (event: React.MouseEvent<HTMLElement>) => {
-    setAnchorEl(event.currentTarget as HTMLElement);
+  // SearchPluginsDialog states and handlers
+  const [openSearchDialog, setOpenSearchDialog] = useState(false);
+  const handleOpenSearchDialog = () => {
+    setOpenSearchDialog(true);
+    if (debug) console.log('Dialog opened for selection');
   };
-
-  const handleCloseMenu = (value: string) => {
-    if (value !== '') setPluginName(value);
-    setAnchorEl(null);
+  const handleCloseSearchDialog = () => {
+    setPluginName('matterbridge-');
+    setOpenSearchDialog(false);
+    if (debug) console.log('Dialog closed without selection');
+  };
+  const handleSelectSearchDialog = (selected: string) => {
+    setPluginName(selected);
+    setOpenSearchDialog(false);
+    if (debug) console.log('Select plugin:', selected);
+  };
+  const handleVersionsSearchDialog = (versions: string[]) => {
+    setPluginVersions(versions);
+    // Default to 'latest' tag if present.
+    setSelectedPluginVersion(versions.includes('latest') ? 'latest' : (versions[0] ?? ''));
+    if (debug) console.log('Select plugin versions:', versions);
   };
 
   const [closed, setClosed] = useState(false);
@@ -170,39 +231,51 @@ function HomeInstallAddPlugins() {
         onDrop={handleFileDrop}
         style={enableMobile && mobile ? { flexWrap: 'wrap', alignItems: 'center', gap: '10px' } : { flexWrap: 'wrap', alignItems: 'center', gap: '20px' }}
       >
-        {/* Input and menu */}
+        {/* SearchPluginDialog */}
+        <SearchPluginsDialog open={openSearchDialog} onClose={handleCloseSearchDialog} onSelect={handleSelectSearchDialog} onVersions={handleVersionsSearchDialog} />
+
+        {/* Input and search IconButton */}
         <div style={{ flex: '1 1 auto', display: 'flex', flexDirection: 'row', alignItems: 'center', gap: '10px' }}>
-          <TextField
-            value={pluginName}
-            onChange={(event) => {
-              setPluginName(event.target.value);
-            }}
-            size='small'
-            id='plugin-name'
-            label='Plugin name or plugin path'
-            variant='outlined'
-            fullWidth
-          />
-          <IconButton onClick={handleClickVertical}>
-            <MoreVert />
-          </IconButton>
-          <Menu id='simple-menu' anchorEl={anchorEl} keepMounted open={Boolean(anchorEl)} onClose={() => handleCloseMenu('')}>
-            <MenuItem onClick={() => handleCloseMenu('matterbridge-zigbee2mqtt')}>matterbridge-zigbee2mqtt</MenuItem>
-            <MenuItem onClick={() => handleCloseMenu('matterbridge-somfy-tahoma')}>matterbridge-somfy-tahoma</MenuItem>
-            <MenuItem onClick={() => handleCloseMenu('matterbridge-shelly')}>matterbridge-shelly</MenuItem>
-            <MenuItem onClick={() => handleCloseMenu('matterbridge-hass')}>matterbridge-hass</MenuItem>
-            <MenuItem onClick={() => handleCloseMenu('matterbridge-webhooks')}>matterbridge-webhooks</MenuItem>
-            <MenuItem onClick={() => handleCloseMenu('matterbridge-bthome')}>matterbridge-bthome</MenuItem>
-            <MenuItem onClick={() => handleCloseMenu('matterbridge-test')}>matterbridge-test</MenuItem>
-            <MenuItem onClick={() => handleCloseMenu('matterbridge-example-accessory-platform')}>matterbridge-example-accessory-platform</MenuItem>
-            <MenuItem onClick={() => handleCloseMenu('matterbridge-example-dynamic-platform')}>matterbridge-example-dynamic-platform</MenuItem>
-            <MenuItem onClick={() => handleCloseMenu('matterbridge-eve-door')}>matterbridge-eve-door</MenuItem>
-            <MenuItem onClick={() => handleCloseMenu('matterbridge-eve-motion')}>matterbridge-eve-motion</MenuItem>
-            <MenuItem onClick={() => handleCloseMenu('matterbridge-eve-energy')}>matterbridge-eve-energy</MenuItem>
-            <MenuItem onClick={() => handleCloseMenu('matterbridge-eve-weather')}>matterbridge-eve-weather</MenuItem>
-            <MenuItem onClick={() => handleCloseMenu('matterbridge-eve-room')}>matterbridge-eve-room</MenuItem>
-          </Menu>
+          <Tooltip title='Provide the npm name or the local path of the plugin to install, uninstall, or add'>
+            <TextField
+              value={pluginName}
+              onChange={(event) => {
+                const next = event.target.value;
+                // Manual edit: clear the versions list so the dropdown disappears.
+                setPluginVersions(['latest', 'dev']);
+                setSelectedPluginVersion('latest');
+                setPluginName(next);
+              }}
+              size='small'
+              id='plugin-name'
+              label='Plugin name or plugin path'
+              variant='outlined'
+              fullWidth
+            />
+          </Tooltip>
+          {pluginVersions.length > 0 && (
+            <Tooltip title='Select the npm tag/version to install'>
+              <span>
+                <FormControl size='small' style={{ minWidth: '150px' }}>
+                  <InputLabel id='plugin-version-label'>Tag or version</InputLabel>
+                  <Select labelId='plugin-version-label' id='plugin-version' value={selectedPluginVersion} label='Tag or version' onChange={(event) => setSelectedPluginVersion(String(event.target.value ?? ''))}>
+                    {pluginVersions.map((v) => (
+                      <MenuItem key={v} value={v}>
+                        {v}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </span>
+            </Tooltip>
+          )}
+          <Tooltip title='Search on npm the plugin to install'>
+            <IconButton size='large' onClick={handleOpenSearchDialog}>
+              <ManageSearchIcon fontSize='inherit' />
+            </IconButton>
+          </Tooltip>
         </div>
+
         {/* Buttons */}
         <div style={{ display: 'flex', flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: '10px' }}>
           <Tooltip title='Install or update a plugin from npm'>
@@ -223,7 +296,7 @@ function HomeInstallAddPlugins() {
               Upload
             </Button>
           </Tooltip>
-          <Tooltip title='Add an installed plugin'>
+          <Tooltip title='Add an already installed plugin or a plugin from a local path'>
             <Button onClick={handleAddPluginClick} onContextMenu={handleAddRightClick} endIcon={<Add />} style={{ color: 'var(--main-button-color)', backgroundColor: 'var(--main-button-bg-color)', height: '30px', minWidth: '90px' }}>
               {' '}
               Add

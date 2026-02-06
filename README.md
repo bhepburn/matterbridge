@@ -7,11 +7,15 @@
 ![Node.js CI](https://github.com/Luligu/matterbridge/actions/workflows/build.yml/badge.svg)
 ![CodeQL](https://github.com/Luligu/matterbridge/actions/workflows/codeql.yml/badge.svg)
 [![codecov](https://codecov.io/gh/Luligu/matterbridge/branch/main/graph/badge.svg)](https://codecov.io/gh/Luligu/matterbridge)
-[![code style: prettier](https://img.shields.io/badge/code_style-prettier-ff69b4.svg?style=flat-square)](https://github.com/prettier/prettier)
+[![styled with prettier](https://img.shields.io/badge/styled_with-Prettier-f8bc45.svg?logo=prettier)](https://github.com/prettier/prettier)
+[![linted with eslint](https://img.shields.io/badge/linted_with-ES_Lint-4B32C3.svg?logo=eslint)](https://github.com/eslint/eslint)
+[![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![ESM](https://img.shields.io/badge/ESM-Node.js-339933?logo=node.js&logoColor=white)](https://nodejs.org/api/esm.html)
+[![matterbridge.io](https://img.shields.io/badge/matterbridge.io-online-brightgreen)](https://matterbridge.io)
 
-[![power by](https://img.shields.io/badge/powered%20by-matter--history-blue)](https://www.npmjs.com/package/matter-history)
-[![power by](https://img.shields.io/badge/powered%20by-node--ansi--logger-blue)](https://www.npmjs.com/package/node-ansi-logger)
-[![power by](https://img.shields.io/badge/powered%20by-node--persist--manager-blue)](https://www.npmjs.com/package/node-persist-manager)
+[![powered by](https://img.shields.io/badge/powered%20by-matter--history-blue)](https://www.npmjs.com/package/matter-history)
+[![powered by](https://img.shields.io/badge/powered%20by-node--ansi--logger-blue)](https://www.npmjs.com/package/node-ansi-logger)
+[![powered by](https://img.shields.io/badge/powered%20by-node--persist--manager-blue)](https://www.npmjs.com/package/node-persist-manager)
 
 ---
 
@@ -71,16 +75,21 @@ https://blog.adafruit.com/2025/11/03/matterbridge-a-matter-plugin-manager/
 
 To run Matterbridge, you need either a [Node.js](https://nodejs.org/en) environment or [Docker](https://docs.docker.com/get-started/get-docker/) installed on your system.
 
-If you don't have Node.js already install, please use this method to install it on a debian device: https://github.com/nodesource/distributions.
-The supported versions of node are 20, 22 and 24. Please install Node.js 22 LTS. Don't use Node.js Current but always the Node.js LTS.
-Node.js 23, like all odd-numbered versions, is not supported.
-Nvm is not a good choice and should not be used for production.
+If you don't have Node.js already installed, please use this method to install it on a Debian system: https://github.com/nodesource/distributions.
 
-If you don't have Docker already install, please use this method to install it on a debian device: https://docs.docker.com/engine/install.
+The supported versions of Node.js are 20, 22, and 24. Please **install Node.js 24 LTS**. Don't use Node.js Current; always use the Node.js LTS releases.
 
-If you don't have Docker already install, please use this method to install it on a Windows or macOS: https://docs.docker.com/get-started/introduction/get-docker-desktop/.
+Node.js 25, like all odd-numbered versions, is not supported.
 
-After follow the guidelines for the [Docker configurations](README-DOCKER.md).
+To verify which Node.js version is currently LTS (Active), check [Node.js Releases](https://nodejs.org/en/about/previous-releases).
+
+**Nvm is not a good choice and should not be used for production**.
+
+If you don't have Docker already installed, please use this method to install it on a Debian system: https://docs.docker.com/engine/install.
+
+If you don't have Docker already installed, please use this method to install it on Windows or macOS: https://docs.docker.com/get-started/introduction/get-docker-desktop/.
+
+After that, follow the guidelines for the [Docker configurations](README-DOCKER.md).
 
 I suggest using Docker for its simplicity.
 
@@ -88,9 +97,9 @@ Since Matter is designed as "a universal IPv6-based communication protocol for s
 
 **Important:** You only need IPv6 on your local network - it doesn't matter if your internet provider doesn't provide IPv6 on the internet side (WAN).
 
-Avoid using VLAN, VM and firewall blocking the communications between the controllers and Matterbridge.
+Avoid VLANs, VMs, and firewalls that block communication between the controllers and Matterbridge.
 
-To pair matterbridge, you need a matter enabled controller (Apple Home, Smart Things, Google Home, Alexa, Home Assistant etc.).
+To pair Matterbridge, you need a Matter-enabled controller (Apple Home, SmartThings, Google Home, Alexa, Home Assistant, etc.).
 
 ## Installation
 
