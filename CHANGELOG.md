@@ -27,7 +27,7 @@ If you like this project and find it useful, please consider giving it a star on
 
 ## Project evolution
 
-The project will evolve to a multi-threaded architecture (the CLI will become the thread manager) with these initial threads:
+The project is evolving to a multi-threaded architecture (the CLI will become the thread manager) with these initial threads:
 
 - matterbridge;
 - frontend;
@@ -36,16 +36,71 @@ The project will evolve to a multi-threaded architecture (the CLI will become th
 - all plugins in bridge mode;
 - each plugin in childbridge mode;
 
-- ✅ check updates;
-- npm install;
-- ✅ check the global node_modules directory;
-
 Advantages:
 
 - real concurrency outside the Node.js main loop;
 - isolation between threads;
 - individual plugin isolation in childbridge mode;
 - ability to update the plugin in childbridge mode without restarting matterbridge;
+
+These threads already run as a workers:
+
+- ✅ check updates;
+- ✅ system check;
+- npm install;
+- ✅ check the global node_modules directory;
+
+## [3.5.4] - 2026-02-13
+
+### Dev Breaking Changes
+
+- [exports]: Removed Matterbridge export from matterbridge.
+
+### Breaking Changes
+
+- [doorLock]: The default value for **DoorLock.actuatorEnabled** has been changed to true. Thanks Ludovic BOUÉ (https://github.com/Luligu/matterbridge/pull/509).
+- [ingress]: Removed the `--ingress` parameter used in the old Home Assisant add-on. Update the Matterbridge Home Assistant Application (formerly known as add-on) if you didn't.
+- [Node.Js]: Restricted **Node.Js requirents** to `>= 20.19` < 21 or `>= 22.13` < 23 or `>= 24` < 25.
+- [Node.Js]: Consider to update all setups to Node.Js 24 that is now the LTS.
+
+### Added
+
+- [packages]: Added **@matterbridge/types** monorepo scoped package.
+- [packages]: Added **@matterbridge/core** monorepo scoped package.
+- [apps]: Added **@matterbridge/frontend** monorepo scoped package.
+- [monorepo]: The transition to a modern monorepo setup with scoped packages is now completed.
+- [addon]: Added two other s6-rc based images to be used in the next releases of the [Home Assistant Application](https://github.com/Luligu/matterbridge-home-assistant-addon).
+- [frontend]: The frontend is now built in the GitHub publish workflow.
+- [SystemCheck]: Added a **system check** (run in its own thread) that starts after 2 minutes and checks the most common causes of issues: Node.Js version and network configuration.
+- [SystemCheck]: Added parameter **--systemcheck** to run the system check and exit.
+
+### Changed
+
+- [package]: Updated dependencies.
+- [matterbridge.io]: Updated docs and styles.
+- [docker]: Updated docker readme file to clarify which base image is used.
+- [frontend]: Bumped `frontend` version to v. 3.4.5.
+
+### Fixed
+
+- [worflows]: Fixed workflows that failed and dockerfiles.
+- [childbridge]: Fixed sequence of disabling a plugin in childbridge mode. Thanks [Tamer Salah](https://github.com/tammeryousef1006).
+
+### Security
+
+During installation you may see in the log a warning that looks scary, for example:
+
+```text
+npm warn deprecated glob@10.5.0: Old versions of glob are not supported, and contain widely publicized security vulnerabilities, which have been fixed in the current version. Please update. Support for old versions may be purchased (at exorbitant rates) by contacting i@izs.me
+```
+
+This warning does not come from Matterbridge code.
+
+It is emitted by a transitive dependency (the `archiver` package) that pulls in an older `glob` version. Matterbridge does not depend on this version of `glob` directly.
+
+In short: you can safely ignore this message; it is a dependency warning, not a Matterbridge vulnerability.
+
+<a href="https://www.buymeacoffee.com/luligugithub"><img src="https://matterbridge.io/assets/bmc-button.svg" alt="Buy me a coffee" width="80"></a>
 
 ## [3.5.3] - 2026-02-06
 

@@ -27,14 +27,13 @@ import { pathToFileURL } from 'node:url';
 import { resolve } from 'node:path';
 import { inspect } from 'node:util';
 
-import { AnsiLogger, debugStringify, LogLevel, TimestampFormat } from 'node-ansi-logger';
+import { AnsiLogger, debugStringify, LogLevel, MAGENTA, TimestampFormat } from 'node-ansi-logger';
 import { hasParameter } from '@matterbridge/utils';
+import type { ParentPortMessage } from '@matterbridge/types';
 
-import type { ParentPortMessage } from './workerTypes.js';
-
-const debug = hasParameter('debug') || hasParameter('verbose') || hasParameter('debug_worker') || hasParameter('verbose_worker');
-const verbose = hasParameter('verbose') || hasParameter('verbose_worker');
-const log = new AnsiLogger({ logName: 'Worker', logTimestampFormat: TimestampFormat.TIME_MILLIS, logLevel: debug ? LogLevel.DEBUG : LogLevel.INFO });
+const debug = hasParameter('debug') || hasParameter('verbose') || hasParameter('debug-worker') || hasParameter('verbose-worker');
+const verbose = hasParameter('verbose') || hasParameter('verbose-worker');
+const log = new AnsiLogger({ logName: 'Worker', logNameColor: MAGENTA, logTimestampFormat: TimestampFormat.TIME_MILLIS, logLevel: debug ? LogLevel.DEBUG : LogLevel.INFO });
 
 /**
  * Sends a control message to the parent through parentPort
@@ -62,6 +61,19 @@ export function parentLog(logName: string | undefined, logLevel: LogLevel, messa
 }
 
 /**
+ *  Logs a message in the worker logger and sends it to the parent logger.
+ *
+ * @param {string} threadName - The name of the thread to include in the log message.
+ * @param {LogLevel} level - The log level of the message.
+ * @param {string} message - The log message to log.
+ * @returns {void}
+ */
+export function threadLogger(threadName: string, level: LogLevel, message: string): void {
+  AnsiLogger.create({ logName: threadName, logNameColor: MAGENTA, logTimestampFormat: TimestampFormat.TIME_MILLIS, logLevel: level }).log(level, message);
+  if (!isMainThread && parentPort) parentLog(threadName, level, message);
+}
+
+/**
  * Typed helper to create an ESM Worker.
  *
  * This function uses pathToFileURL to convert the relative path to a file URL,
@@ -73,6 +85,7 @@ export function parentLog(logName: string | undefined, logLevel: LogLevel, messa
  * @param {string[]} [argv] - optional command line arguments to pass to the worker. If not provided, inherits from the main thread.
  * @param {NodeJS.ProcessEnv} [env] - optional environment variables to pass to the worker. If not provided, inherits from the main thread.
  * @param {string[]} [execArgv] - optional execArgv to pass to the worker. If not provided no execArgv are passed.
+ * @param {boolean} [pipedOutput] - whether to pipe the worker's stdout and stderr. Defaults to false.
  * @returns {Worker} - the created Worker instance
  *
  * @example
@@ -87,6 +100,7 @@ export function createESMWorker(
   argv?: string[],
   env?: NodeJS.ProcessEnv,
   execArgv?: string[],
+  pipedOutput: boolean = false,
 ): Worker {
   const fileURL = pathToFileURL(resolve(relativePath));
   const options: WorkerOptions & { type: string } = {
@@ -96,6 +110,8 @@ export function createESMWorker(
     argv: argv ?? process.argv.slice(2), // Pass command line arguments to worker
     env: env ?? process.env, // Inherit environment variables
     execArgv, // execArgv for node like --inspect
+    stdout: pipedOutput,
+    stderr: pipedOutput,
   };
   if (verbose) log.debug(`Creating ESM Worker ${name} with file URL: ${fileURL.href} and options: ${debugStringify(options)}`);
   return new Worker(fileURL, options);

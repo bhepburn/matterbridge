@@ -77,13 +77,13 @@ To run Matterbridge, you need either a [Node.js](https://nodejs.org/en) environm
 
 If you don't have Node.js already installed, please use this method to install it on a Debian system: https://github.com/nodesource/distributions.
 
-The supported versions of Node.js are 20, 22, and 24. Please **install Node.js 24 LTS**. Don't use Node.js Current; always use the Node.js LTS releases.
+The supported versions of Node.js are >=20.19.0, >=22.13.0, and 24. Please **install Node.js 24 LTS**. Don't use Node.js Current; always use the Node.js LTS releases.
 
-Node.js 25, like all odd-numbered versions, is not supported.
+Node.js 21, 23, 25, like all odd-numbered versions, are not supported.
 
 To verify which Node.js version is currently LTS (Active), check [Node.js Releases](https://nodejs.org/en/about/previous-releases).
 
-**Nvm is not a good choice and should not be used for production**.
+> **Nvm is a development tool and is not supported for production**.
 
 If you don't have Docker already installed, please use this method to install it on a Debian system: https://docs.docker.com/engine/install.
 
@@ -219,7 +219,7 @@ or with user matterbridge and with private global node_modules and npm cache (no
 
 ### Run matterbridge as an home assistant add-on with the official add-on
 
-[Home assistant add-on configuration](https://github.com/Luligu/matterbridge-home-assistant-addon)
+[Home assistant application (formerly known as add-on) configuration](https://github.com/Luligu/matterbridge-home-assistant-addon)
 
 ### Other Home Assistant Community Add-ons
 
@@ -465,7 +465,7 @@ Place your own certificates in the `.matterbridge/cert` directory:
 
 ![image](./screenshots/Screenshot%20Certificates.png)
 
-Matterbridge looks first for .p12 certificate and if it is not found it looks for cert.pem and key.pem.
+Matterbridge looks first for .p12 certificate and, if they are not found, it looks for cert.pem and key.pem.
 
 ### Provide your own 'PKCS#12' certificate and the passphrase
 
@@ -474,7 +474,7 @@ Place your own p12 certificate (binary file) and the passphrase (text file) in t
 - `cert.p12`
 - `cert.pass`
 
-Matterbridge looks first for .p12 certificate and if it is not found it looks for cert.pem and key.pem.
+Matterbridge looks first for .p12 certificate and, if they are not found, it looks for cert.pem and key.pem.
 
 ### Change the command line
 
