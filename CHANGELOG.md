@@ -50,6 +50,33 @@ These threads already run as a workers:
 - npm install;
 - ✅ check the global node_modules directory;
 
+## [3.5.5] - 2026-02-20
+
+### Breaking Changes
+
+- [Node.Js]: Consider to update all setups to Node.Js 24 that is now the LTS.
+- [docker]: Use mb_health instead of curl for HEALTHCHECK. This allows to save around 15MB on the image size. If you override the UI port or the protocol, update the CMD with mb_health https://localhost/health.
+
+### Added
+
+- [images]: Add OCI standard labels (https://opencontainers.org/) to docker pipelines.
+- [frontend]: Add frontend publishing steps to publish workflow.
+- [docker]: Add dockerVersion api.
+
+### Changed
+
+- [package]: Update dependencies.
+- [package]: Bump package to `automator` v.3.0.8.
+- [package]: Bump `node-persist-manager` to v.2.0.1,
+- [package]: Bump `eslint` to v.10.0.0.
+- [package]: Bump `matter.js` to v.0.16.9 (suspended, waiting for https://github.com/matter-js/matter.js/issues/3232).
+
+### Fixed
+
+- [frontend]: Fix possible issue with some browser in check authentication. Thanks Ludovic BOUÉ and k3067e3 (https://github.com/Luligu/matterbridge/issues/498).
+
+<a href="https://www.buymeacoffee.com/luligugithub"><img src="https://matterbridge.io/assets/bmc-button.svg" alt="Buy me a coffee" width="80"></a>
+
 ## [3.5.4] - 2026-02-13
 
 ### Dev Breaking Changes
@@ -130,7 +157,7 @@ In short: you can safely ignore this message; it is a dependency warning, not a 
 - [workflows]: Updated all workflows to use Node.js 24.
 - [readme]: Updated readme files to clarify which Node.js version should be installed.
 - [docker]: Updated docker readme file to clarify which base image is used.
-- [matter.js]: Bump to matter.j v. 0.16.8.
+- [matter.js]: Bump to matter.js v. 0.16.8.
 - [frontend]: Bumped `frontend` version to v. 3.4.4.
 - [frontend]: Updated `frontend` dependencies.
 - [frontend]: Updated rendering of button actions in config editor.

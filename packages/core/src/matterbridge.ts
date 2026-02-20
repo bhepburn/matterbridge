@@ -22,6 +22,7 @@
  * limitations under the License.
  */
 
+// istanbul ignore if -- Loader logs are not relevant for coverage
 // eslint-disable-next-line no-console
 if (process.argv.includes('--loader') || process.argv.includes('-loader')) console.log('\u001B[32mMatterbridge loaded.\u001B[40;0m');
 
@@ -489,9 +490,8 @@ export class Matterbridge extends EventEmitter<MatterbridgeEvents> {
     // Set the matterbridge root directory
     const currentFileDirectory = path.dirname(fileURLToPath(import.meta.url));
     // Adjust the path for packages core dist directory or node_modules @matterbridge core dist directory
-    this.rootDirectory = currentFileDirectory.includes(path.join('packages', 'core'))
-      ? path.resolve(currentFileDirectory, '../', '../', '../')
-      : path.resolve(currentFileDirectory, '../', '../', '..', '../');
+    // prettier-ignore
+    this.rootDirectory = currentFileDirectory.includes(path.join('packages', 'core')) ? path.resolve(currentFileDirectory, '../', '../', '../') : path.resolve(currentFileDirectory, '../', '../', '..', '../');
 
     // Setup the matter environment with default values
     this.environment.vars.set('log.level', MatterLogLevel.INFO);
@@ -1032,7 +1032,7 @@ export class Matterbridge extends EventEmitter<MatterbridgeEvents> {
       }
     } catch (error) {
       this.log.fatal(`Fatal error creating matter storage: ${error instanceof Error ? error.message : error}`);
-      throw new Error(`Fatal error creating matter storage: ${error instanceof Error ? error.message : error}`);
+      throw new Error(`Fatal error creating matter storage: ${error instanceof Error ? error.message : error}`, { cause: error });
     }
 
     // Clear the matterbridge context if the reset parameter is set (bridge mode)
@@ -2417,12 +2417,8 @@ const commissioningController = new CommissioningController({
    * @param {number} [discriminator] - The discriminator for the server node. Defaults to 3850.
    * @returns {Promise<ServerNode<ServerNode.RootEndpoint>>} A promise that resolves to the created server node.
    */
-  private async createServerNode(
-    storageContext: StorageContext,
-    port: number = 5540,
-    passcode: number = 20242025,
-    discriminator: number = 3850,
-  ): Promise<ServerNode<ServerNode.RootEndpoint>> {
+  // prettier-ignore
+  private async createServerNode(storageContext: StorageContext, port: number = 5540, passcode: number = 20242025, discriminator: number = 3850): Promise<ServerNode<ServerNode.RootEndpoint>> {
     const storeId = await storageContext.get<string>('storeId');
     this.log.notice(`Creating server node for ${storeId} on port ${port} with passcode ${passcode} and discriminator ${discriminator}...`);
     this.log.debug(`- storeId: ${await storageContext.get('storeId')}`);
@@ -2519,6 +2515,7 @@ const commissioningController = new CommissioningController({
     /** This event is triggered when the device went online. This means that it is discoverable in the network. */
     serverNode.lifecycle.online.on(async () => {
       this.log.notice(`Server node for ${storeId} is online`);
+      // istanbul ignore else
       if (!serverNode.lifecycle.isCommissioned) {
         this.log.notice(`Server node for ${storeId} is not commissioned. Pair to commission ...`);
         this.advertisingNodes.set(storeId, Date.now());
@@ -2526,9 +2523,7 @@ const commissioningController = new CommissioningController({
         this.log.notice(`QR Code URL: https://project-chip.github.io/connectedhomeip/qrcode.html?data=${qrPairingCode}`);
         this.log.notice(`Manual pairing code: ${manualPairingCode}`);
       } else {
-        // istanbul ignore next
         this.log.notice(`Server node for ${storeId} is already commissioned. Waiting for controllers to connect ...`);
-        // istanbul ignore next
         this.advertisingNodes.delete(storeId);
       }
       this.frontend.wssSendRefreshRequired('matter', { matter: { ...this.getServerNodeData(serverNode) } });

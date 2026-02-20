@@ -21,6 +21,8 @@
  * limitations under the License.
  */
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 /*
  *  This file contains the Jest helpers for testing the Matterbridge core package.
  *
@@ -347,6 +349,15 @@ export async function startMatterbridge(
   matterbridge = await Matterbridge.loadInstance(true);
   // @ts-expect-error - access to private member for testing
   expect(matterbridge.environment).toBeDefined();
+
+  // Clear the timeouts and intervals set by initialize to prevent them from running during tests
+  expect((matterbridge as any).systemCheckTimeout).toBeDefined();
+  expect((matterbridge as any).checkUpdateTimeout).toBeDefined();
+  expect((matterbridge as any).checkUpdateInterval).toBeDefined();
+  clearTimeout((matterbridge as any).systemCheckTimeout);
+  clearTimeout((matterbridge as any).checkUpdateTimeout);
+  clearInterval((matterbridge as any).checkUpdateInterval);
+
   // Setup the mDNS service in the environment
   // @ts-expect-error - access to private member for testing
   new MdnsService(matterbridge.environment);
@@ -483,7 +494,7 @@ export async function createMatterbridgeEnvironment(name: string): Promise<Matte
   matterbridge = await Matterbridge.loadInstance(false);
   expect(matterbridge).toBeDefined();
   expect(matterbridge).toBeInstanceOf(Matterbridge);
-  matterbridge.matterbridgeVersion = '3.5.4';
+  matterbridge.matterbridgeVersion = '3.5.5';
   matterbridge.bridgeMode = 'bridge';
   matterbridge.rootDirectory = path.join('jest', name);
   matterbridge.homeDirectory = path.join('jest', name);
@@ -805,22 +816,17 @@ export async function flushAsync(ticks: number = 3, microTurns: number = 10, pau
  * @returns {number} - The total number of active handles and requests
  */
 export function logKeepAlives(log?: AnsiLogger): number {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const handles = (process as any)._getActiveHandles?.() ?? [];
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const requests = (process as any)._getActiveRequests?.() ?? [];
 
   // istanbul ignore next
   const fmtHandle = (h: unknown, i: number) => {
     const ctor = (h as { constructor?: { name?: string } })?.constructor?.name ?? 'Unknown';
     // Timer-like?
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const hasRef = typeof (h as any)?.hasRef === 'function' ? (h as any).hasRef() : undefined;
     // MessagePort?
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const isPort = (h as any)?.constructor?.name?.includes('MessagePort');
     // Socket/Server?
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const fd = (h as any)?.fd ?? (h as any)?._handle?.fd;
     return { i, type: ctor, hasRef, isPort, fd };
   };
@@ -1007,6 +1013,8 @@ export async function startServerNode(
 
   // Return early if createOnly is true
   if (createOnly) {
+    // Ensure the queue is empty and pause 100ms to allow any pending work to complete before returning the server and aggregator
+    await flushAsync(3, 3, 100);
     return [server, aggregator];
   }
 
@@ -1031,8 +1039,8 @@ export async function startServerNode(
   expect(aggregator.lifecycle.hasId).toBeTruthy();
   expect(aggregator.lifecycle.hasNumber).toBeTruthy();
 
-  // Ensure the queue is empty and pause 250ms
-  await flushAsync(3, 3, 10);
+  // Ensure the queue is empty and pause 100ms to allow any pending work to complete before returning the server and aggregator
+  await flushAsync(3, 3, 100);
 
   return [server, aggregator];
 }
@@ -1061,8 +1069,8 @@ export async function stopServerNode(server: ServerNode<ServerNode.RootEndpoint>
   expect(server.lifecycle.isReady).toBeFalsy();
   expect(server.lifecycle.isOnline).toBeFalsy();
 
-  // Ensure the queue is empty and pause 250ms
-  await flushAsync(3, 3, 10);
+  // Ensure the queue is empty and pause 100ms to allow any pending work to complete before returning the server and aggregator
+  await flushAsync(3, 3, 100);
 }
 
 /**
@@ -1079,6 +1087,7 @@ export async function addDevice(owner: ServerNode<ServerNode.RootEndpoint> | End
   expect(owner.lifecycle.isReady).toBeTruthy();
   expect(owner.construction.status).toBe(Lifecycle.Status.Active);
   expect(owner.lifecycle.isPartsReady).toBeTruthy();
+  await flushAsync(undefined, undefined, pause);
 
   // istanbul ignore next
   try {

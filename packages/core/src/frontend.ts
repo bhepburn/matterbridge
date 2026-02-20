@@ -22,7 +22,8 @@
  * limitations under the License.
  */
 
-/* eslint-disable-next-line no-console */ /* istanbul ignore next */
+// istanbul ignore if -- Loader logs are not relevant for coverage
+// eslint-disable-next-line no-console
 if (process.argv.includes('--loader') || process.argv.includes('-loader')) console.log('\u001B[32mFrontend loaded.\u001B[40;0m');
 
 // Node modules
@@ -115,7 +116,7 @@ export class Frontend extends EventEmitter<FrontendEvents> {
   private port = 8283;
   private listening = false;
   private storedPassword: string | undefined = undefined;
-  private authClients: string[] = [];
+  private authClients = new Set<string>();
 
   private expressApp: Express | undefined;
   private httpServer: HttpServer | undefined;
@@ -241,8 +242,8 @@ export class Frontend extends EventEmitter<FrontendEvents> {
     this.log.logLevel = logLevel;
   }
 
-  validateReq(req: import('express').Request<unknown, unknown, unknown, { password?: string }>, res: import('express').Response): boolean {
-    if (req.ip && !this.authClients.includes(req.ip)) {
+  private validateReq(req: import('express').Request<unknown, unknown, unknown, { password?: string }>, res: import('express').Response): boolean {
+    if (req.ip && !this.authClients.has(req.ip)) {
       this.log.warn(`Warning blocked unauthorized access request ${req.originalUrl ?? req.url} from ${req.ip}`);
       res.status(401).json({ error: 'Unauthorized' });
       return false;
@@ -333,7 +334,10 @@ export class Frontend extends EventEmitter<FrontendEvents> {
         if (this.webSocketServer?.clients.size === 0) {
           AnsiLogger.setGlobalCallback(undefined);
           this.log.debug('All WebSocket clients disconnected. WebSocketServer logger global callback removed');
-          this.authClients = [];
+          setTimeout(() => {
+            this.log.debug('All WebSocket clients disconnected. Auth clients list cleared');
+            if (this.webSocketServer?.clients.size === 0) this.authClients.clear();
+          }, 250).unref();
         }
       });
 
@@ -413,7 +417,7 @@ export class Frontend extends EventEmitter<FrontendEvents> {
           // Complete the WebSocket handshake
           this.log.debug(`WebSocket upgrade success host ${url.host} password ${password ? '[redacted]' : '(empty)'}`);
           // istanbul ignore else
-          if (req.socket.remoteAddress) this.authClients.push(req.socket.remoteAddress);
+          if (req.socket.remoteAddress) this.authClients.add(req.socket.remoteAddress);
           this.webSocketServer?.handleUpgrade(req, socket, head, (ws) => {
             this.webSocketServer?.emit('connection', ws, req);
           });
@@ -450,6 +454,7 @@ export class Frontend extends EventEmitter<FrontendEvents> {
       let pfx: Buffer | undefined;
       let passphrase: string | undefined;
 
+      // eslint-disable-next-line no-useless-assignment
       let httpsServerOptions: HttpsServerOptions = {};
 
       const fs = await import('node:fs');
@@ -556,7 +561,7 @@ export class Frontend extends EventEmitter<FrontendEvents> {
           // Complete the WebSocket handshake
           this.log.debug(`WebSocket upgrade success host ${url.host} password ${password ? '[redacted]' : '(empty)'}`);
           // istanbul ignore else
-          if (req.socket.remoteAddress) this.authClients.push(req.socket.remoteAddress);
+          if (req.socket.remoteAddress) this.authClients.add(req.socket.remoteAddress);
           this.webSocketServer?.handleUpgrade(req, socket, head, (ws) => {
             this.webSocketServer?.emit('connection', ws, req);
           });
@@ -605,7 +610,7 @@ export class Frontend extends EventEmitter<FrontendEvents> {
       if (this.storedPassword === '' || password === this.storedPassword) {
         this.log.debug('/api/login password valid');
         res.json({ valid: true });
-        if (req.ip) this.authClients.push(req.ip);
+        if (req.ip) this.authClients.add(req.ip);
       } else {
         this.log.warn('/api/login error wrong password');
         res.json({ valid: false });
@@ -1464,12 +1469,8 @@ export class Frontend extends EventEmitter<FrontendEvents> {
     // Get the clusters from the main endpoint
     endpoint.forEachAttribute((clusterName, clusterId, attributeName, attributeId, attributeValue) => {
       if (typeof attributeValue === 'undefined' || attributeValue === undefined) return;
-      // istanbul ignore if cause is not reachable without the EveHistory cluster
-      if (clusterName === 'EveHistory' && ['configDataGet', 'configDataSet', 'historyStatus', 'historyEntries', 'historyRequest', 'historySetTime', 'rLoc'].includes(attributeName))
-        return;
-      // console.log(
-      //   `${idn}${endpoint.deviceName}${rs}${nf} => Cluster: ${CYAN}${clusterName} (0x${clusterId.toString(16).padStart(2, '0')})${nf} Attribute: ${CYAN}${attributeName} (0x${attributeId.toString(16).padStart(2, '0')})${nf} Value: ${YELLOW}${typeof attributeValue === 'object' ? stringify(attributeValue as object) : attributeValue}${nf}`,
-      // );
+      // prettier-ignore
+      if (clusterName === 'EveHistory' && ['configDataGet', 'configDataSet', 'historyStatus', 'historyEntries', 'historyRequest', 'historySetTime', 'rLoc'].includes(attributeName)) return;
       clusters.push({
         endpoint: endpoint.number.toString(),
         number: endpoint.number,
@@ -1486,16 +1487,12 @@ export class Frontend extends EventEmitter<FrontendEvents> {
 
     // Get the child endpoints
     const childEndpoints = endpoint.getChildEndpoints();
-    // if (childEndpoints.length === 0) {
-    // this.log.debug(`***getClusters: found ${childEndpoints.length} child endpoints for device ${endpoint.deviceName} plugin ${pluginName} and endpoint number ${endpointNumber}`);
-    // }
     childEndpoints.forEach((childEndpoint) => {
       // istanbul ignore if cause is not reachable: should never happen but ...
       if (!childEndpoint.maybeId || !childEndpoint.maybeNumber) {
         this.log.error(`getClusters: no child endpoint found for plugin ${pluginName} and endpoint number ${endpointNumber}`);
         return;
       }
-      // this.log.debug(`***getClusters: getting clusters for child endpoint ${childEndpoint.id} of device ${endpoint.deviceName} plugin ${pluginName} endpoint number ${childEndpoint.number}`);
 
       // Get the device types of the child endpoint
       const deviceTypes: number[] = [];
@@ -1505,15 +1502,8 @@ export class Frontend extends EventEmitter<FrontendEvents> {
 
       childEndpoint.forEachAttribute((clusterName, clusterId, attributeName, attributeId, attributeValue) => {
         if (typeof attributeValue === 'undefined' || attributeValue === undefined) return;
-        // istanbul ignore if cause is not reachable without the EveHistory cluster
-        if (
-          clusterName === 'EveHistory' &&
-          ['configDataGet', 'configDataSet', 'historyStatus', 'historyEntries', 'historyRequest', 'historySetTime', 'rLoc'].includes(attributeName)
-        )
-          return;
-        // console.log(
-        //   `${idn}${childEndpoint.deviceName}${rs}${nf} => Cluster: ${CYAN}${clusterName} (0x${clusterId.toString(16).padStart(2, '0')})${nf} Attribute: ${CYAN}${attributeName} (0x${attributeId.toString(16).padStart(2, '0')})${nf} Value: ${YELLOW}${typeof attributeValue === 'object' ? stringify(attributeValue as object) : attributeValue}${nf}`,
-        // );
+        // prettier-ignore
+        if (clusterName === 'EveHistory' && ['configDataGet', 'configDataSet', 'historyStatus', 'historyEntries', 'historyRequest', 'historySetTime', 'rLoc'].includes(attributeName)) return;
         clusters.push({
           endpoint: childEndpoint.number.toString(),
           number: childEndpoint.number,
@@ -1583,6 +1573,7 @@ export class Frontend extends EventEmitter<FrontendEvents> {
     let data: WsMessageApiRequest;
 
     const sendResponse = (data: WsMessageApiResponse | WsMessageErrorApiResponse) => {
+      // istanbul ignore else cause is only a safety check
       if (client.readyState === client.OPEN) {
         if ('response' in data) {
           const { response, ...rest } = data;
@@ -1594,7 +1585,6 @@ export class Frontend extends EventEmitter<FrontendEvents> {
         }
         client.send(JSON.stringify(data));
       } else {
-        // istanbul ignore next cause is only a safety check
         this.log.error('Cannot send api response, client not connected');
       }
     };

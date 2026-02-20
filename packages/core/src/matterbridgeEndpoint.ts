@@ -25,6 +25,7 @@
 /* eslint-disable jsdoc/reject-any-type */
 /* eslint-disable jsdoc/reject-function-type */
 
+// istanbul ignore if -- Loader logs are not relevant for coverage
 // eslint-disable-next-line no-console
 if (process.argv.includes('--loader') || process.argv.includes('-loader')) console.log('\u001B[32mMatterbridgeEndpoint loaded.\u001B[40;0m');
 
@@ -266,6 +267,7 @@ export class MatterbridgeEndpoint extends Endpoint {
    * @param {boolean} [debug] - Debug flag.
    */
   constructor(definition: DeviceTypeDefinition | AtLeastOne<DeviceTypeDefinition>, options: MatterbridgeEndpointOptions = {}, debug: boolean = false) {
+    // eslint-disable-next-line no-useless-assignment
     let deviceTypeList: { deviceType: number; revision: number }[] = [];
     const originalId = options.id;
 
@@ -362,11 +364,8 @@ export class MatterbridgeEndpoint extends Endpoint {
    * @param {boolean} [debug] - Debug flag.
    * @returns {Promise<MatterbridgeEndpoint>} MatterbridgeEndpoint instance.
    */
-  static async loadInstance(
-    definition: DeviceTypeDefinition | AtLeastOne<DeviceTypeDefinition>,
-    options: MatterbridgeEndpointOptions = {},
-    debug: boolean = false,
-  ): Promise<MatterbridgeEndpoint> {
+  // prettier-ignore
+  static async loadInstance(definition: DeviceTypeDefinition | AtLeastOne<DeviceTypeDefinition>, options: MatterbridgeEndpointOptions = {}, debug: boolean = false): Promise<MatterbridgeEndpoint> {
     return new MatterbridgeEndpoint(definition, options, debug);
   }
 
@@ -2200,7 +2199,7 @@ export class MatterbridgeEndpoint extends Endpoint {
         Thermostat.Feature.Cooling,
         Thermostat.Feature.AutoMode,
         ...(occupied !== undefined ? [Thermostat.Feature.Occupancy] : []),
-        ...(presetsList !== undefined || presetTypes !== undefined ? [Thermostat.Feature.Presets] : []),
+        Thermostat.Feature.Presets,
       ),
       {
         localTemperature: localTemperature * 100,

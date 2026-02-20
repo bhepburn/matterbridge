@@ -22,6 +22,10 @@
  * limitations under the License.
  */
 
+// istanbul ignore if -- Loader logs are not relevant for coverage
+// eslint-disable-next-line no-console
+if (process.argv.includes('--loader') || process.argv.includes('-loader')) console.log('\u001B[32mDevice Manager loaded.\u001B[40;0m');
+
 // AnsiLogger module
 import { AnsiLogger, BLUE, CYAN, db, debugStringify, er, LogLevel, TimestampFormat } from 'node-ansi-logger';
 // @matterbridge

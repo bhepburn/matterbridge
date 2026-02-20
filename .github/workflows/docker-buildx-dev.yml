@@ -44,26 +44,27 @@ jobs:
       - name: Verify Npm version
         run: npm -v
 
-      - name: Stamp build metadata into package.json
-        run: |
-          npm pkg set build.sha="${GITHUB_SHA}"
-          npm pkg set build.sha7="${GITHUB_SHA::7}"
-          npm pkg set build.event="${GITHUB_EVENT_NAME}"
-          npm pkg set build.workflow="${GITHUB_WORKFLOW}"
-          npm pkg set build.type="${GITHUB_REF_TYPE}"
-          npm pkg set build.name="${GITHUB_REF_NAME}"
-          npm pkg set build.docker="true"
-          npm pkg set build.dev="true"
-
-      - name: Extract version from package.json
-        id: extract_version
+      - name: Set metadata
+        id: meta
         run: |
           VERSION=$(jq -r '.version' package.json)
-          echo "VERSION=$VERSION" >> $GITHUB_ENV
+          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+          echo "VCS_REF=${GITHUB_SHA::7}" >> $GITHUB_OUTPUT
+          echo "BUILD_DATE=$(date -u +'%Y-%m-%dT%H:%M:%SZ')" >> $GITHUB_OUTPUT
 
-      - name: Echo main version ${{ env.VERSION }}
+      - name: Write build metadata to .dockerbuild.json
         run: |
-          echo "Extracted version is: ${{ env.VERSION }}"
+          cat > .dockerbuild.json <<EOF
+          {
+            "sha": "${GITHUB_SHA}",
+            "sha7": "${GITHUB_SHA::7}",
+            "event": "${GITHUB_EVENT_NAME}",
+            "workflow": "${GITHUB_WORKFLOW}",
+            "type": "${GITHUB_REF_TYPE}",
+            "name": "${GITHUB_REF_NAME}",
+            "dev": true
+          }
+          EOF
 
       - name: Log in to Docker Hub
         uses: docker/login-action@v3
@@ -81,7 +82,7 @@ jobs:
         with:
           version: latest
 
-      - name: Run Docker Buildx on dev
+      - name: Run Docker Buildx with Dockerfile.dev for version ${{ steps.meta.outputs.VERSION }}
         run: |
           docker buildx build \
             --no-cache \
@@ -89,7 +90,10 @@ jobs:
             --platform linux/amd64,linux/arm64 \
             -f docker/Dockerfile.dev \
             -t luligu/matterbridge:dev \
-            -t luligu/matterbridge:dev-${{ env.VERSION }} \
+            -t luligu/matterbridge:dev-${{ steps.meta.outputs.VERSION }} \
+            --build-arg VERSION=${{ steps.meta.outputs.VERSION }} \
+            --build-arg VCS_REF=${{ steps.meta.outputs.VCS_REF }} \
+            --build-arg BUILD_DATE=${{ steps.meta.outputs.BUILD_DATE }} \
             --push .
         timeout-minutes: 60
 
