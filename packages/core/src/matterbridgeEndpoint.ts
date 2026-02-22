@@ -3204,18 +3204,18 @@ export class MatterbridgeEndpoint extends Endpoint {
    * Creates a default TotalVolatileOrganicCompoundsConcentrationMeasurement cluster server with feature NumericMeasurement.
    *
    * @param {number | null} measuredValue - The measured value of the concentration.
-   * @param {ConcentrationMeasurement.MeasurementUnit} measurementUnit - The unit of measurement (default to ConcentrationMeasurement.MeasurementUnit.Ugm3).
+   * @param {ConcentrationMeasurement.MeasurementUnit} measurementUnit - The unit of measurement (default to ConcentrationMeasurement.MeasurementUnit.Ppb).
    * @param {ConcentrationMeasurement.MeasurementMedium} measurementMedium - The unit of measurement (default to ConcentrationMeasurement.MeasurementMedium.Air).
    * @param {number} [uncertainty] - The uncertainty value (optional).
    * @returns {this} The current MatterbridgeEndpoint instance for chaining.
    *
    * @remarks
    * The measurementUnit and the measurementMedium attributes are fixed and cannot be changed after creation.
-   * Apple Home requires Ugm3 for TotalVolatileOrganicCompoundsConcentrationMeasurement cluster.
+   * Smartthings requires Ppb for TotalVolatileOrganicCompoundsConcentrationMeasurement cluster.
    */
   createDefaultTvocMeasurementClusterServer(
     measuredValue: number | null = null,
-    measurementUnit: ConcentrationMeasurement.MeasurementUnit = ConcentrationMeasurement.MeasurementUnit.Ugm3,
+    measurementUnit: ConcentrationMeasurement.MeasurementUnit = ConcentrationMeasurement.MeasurementUnit.Ppb,
     measurementMedium: ConcentrationMeasurement.MeasurementMedium = ConcentrationMeasurement.MeasurementMedium.Air,
     uncertainty?: number,
   ): this {
